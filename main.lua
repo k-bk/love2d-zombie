@@ -3,17 +3,17 @@
 --------------------
 
 
-TILE = 
+TILE =
     64
 
 
-love.load = 
+love.load =
     function ()
-        local player = 
+        local player =
             Entity.Create.player { x = 1, y = 1 }
 
         local entities =
-            { player 
+            { player
             , Entity.Create.obstacle { x = 5, y = 5 }
             , Entity.Create.obstacle { x = 5, y = 6 }
             , Entity.Create.obstacle { x = 6, y = 7 }
@@ -32,7 +32,7 @@ love.load =
             , mouse = Vector.null ()
             }
 
-        model = 
+        model =
             { entities = entities
             , player = player
             , screenWidth = 800
@@ -48,7 +48,7 @@ love.load =
 --------------------
 
 
-love.update = 
+love.update =
     function ( timeDelta )
         local inputVector = inputToVector ( model.input )
         Update.shoot ( model.player, model.input, model.entities )
@@ -63,9 +63,9 @@ Update = {}
 Update.controllable =
     function ( entities, inputVector )
         for _, entity in ipairs ( entities ) do
-            if entity.controllable 
-                and entity.direction 
-            then 
+            if entity.controllable
+                and entity.direction
+            then
                 entity.direction = Vector.copy ( inputVector )
             end
         end
@@ -76,7 +76,7 @@ Update.shoot =
     function ( entity, input, entities )
         if entity.position and input.mouseLeft then
             local dir
-            dir = Vector.copy ( entity.position ) 
+            dir = Vector.copy ( entity.position )
             dir = Vector.sub ( dir, input.mouse )
             dir = Vector.normalize ( dir )
             local bullet
@@ -96,10 +96,10 @@ Update.forces =
                 and entity.direction
                 and entity.force
             then
-                local force = 
+                local force =
                     Vector.scale ( entity.direction, entity.speed * timeDelta )
                 print ( Table.toString (force) )
-                Entity.applyForce ( entity, force ) 
+                Entity.applyForce ( entity, force )
             end
         end
     end
@@ -117,7 +117,7 @@ Update.moveAll =
 
 
 Update.processCollisions =
-    function ( entity, collisions ) 
+    function ( entity, collisions )
         for _, colliding in pairs ( collisions ) do
         end
     end
@@ -127,17 +127,17 @@ inputToVector =
     function ( input )
         local vector = Vector.null ()
 
-        if input.up then 
-            vector.y = vector.y - 1 
+        if input.up then
+            vector.y = vector.y - 1
         end
-        if input.down then 
-            vector.y = vector.y + 1 
+        if input.down then
+            vector.y = vector.y + 1
         end
-        if input.left then 
-            vector.x = vector.x - 1 
+        if input.left then
+            vector.x = vector.x - 1
         end
-        if input.right then 
-            vector.x = vector.x + 1 
+        if input.right then
+            vector.x = vector.x + 1
         end
 
         return Vector.normalize ( vector )
@@ -178,7 +178,7 @@ love.keyreleased =
 
 
 love.mousepressed =
-    function ( x, y, button, isTouch ) 
+    function ( x, y, button, isTouch )
         model.input.mouse.x = x
         model.input.mouse.y = y
         if button == 1 then
@@ -190,7 +190,7 @@ love.mousepressed =
 
 
 love.mousereleased =
-    function ( x, y, button, isTouch ) 
+    function ( x, y, button, isTouch )
         model.input.mouseX = x
         model.input.mouseY = y
         if button == 1 then
@@ -213,7 +213,7 @@ love.mousemoved =
 --------------------
 
 
-love.draw = 
+love.draw =
     function ()
         love.graphics.setCanvas ( model.canvas )
 
@@ -235,14 +235,14 @@ Draw.cursor =
         local oldColor = Utils.getColor ()
             if input.mouseLeft then
                 love.graphics.setColor ( 1, 0, 0 )
-            else 
+            else
                 love.graphics.setColor ( 1, 1, 1 )
             end
-            love.graphics.circle ( 
+            love.graphics.circle (
                 "line"
                 , input.mouse.x
                 , input.mouse.y
-                , 10  
+                , 10
                 , 20
                 )
         love.graphics.setColor ( oldColor )
@@ -251,16 +251,16 @@ Draw.cursor =
 
 Draw.entity =
     function ( entity )
-        if entity.position 
-            and entity.width 
-            and entity.height 
+        if entity.position
+            and entity.width
+            and entity.height
         then
-            love.graphics.rectangle ( 
+            love.graphics.rectangle (
                 "line"
                 , entity.position.x
                 , entity.position.y
                 , entity.width
-                , entity.height 
+                , entity.height
                 )
         end
     end
@@ -274,7 +274,7 @@ Draw.entity =
 Array = {}
 
 
-Array.map = 
+Array.map =
     function ( array, fun )
         local newArray = {}
         for i, v in ipairs ( array ) do
@@ -304,10 +304,10 @@ Array.filter =
 Entity = {}
 
 
-Entity.applyForce = 
+Entity.applyForce =
     function ( entity, force )
-        if entity.force 
-            and entity.remainder 
+        if entity.force
+            and entity.remainder
         then
             entity.force.x, remainder.x = math.modf ( remainder.x + force.x )
             entity.force.y, remainder.y = math.modf ( remainder.y + force.y )
@@ -315,7 +315,7 @@ Entity.applyForce =
     end
 
 
-Entity.moveX = 
+Entity.moveX =
     function ( entity, entities )
         local position = entity.position
         local remainder = entity.remainder
@@ -336,7 +336,7 @@ Entity.moveX =
     end
 
 
-Entity.moveY = 
+Entity.moveY =
     function ( entity, entities )
         local position = entity.position
         local remainder = entity.remainder
@@ -357,9 +357,9 @@ Entity.moveY =
     end
 
 
-Entity.collisionsWith = 
-    function ( entity, entities ) 
-        local canCollide = 
+Entity.collisionsWith =
+    function ( entity, entities )
+        local canCollide =
             function ( e )
                 return e.position
                     and e.width
@@ -371,14 +371,14 @@ Entity.collisionsWith =
         if canCollide ( entity ) then
             for _, other in ipairs ( entities ) do
                 if other.mask == nil
-                    or not Table.member ( other.mask, entity ) 
+                    or not Table.member ( other.mask, entity )
                 then
-                    if other ~= entity 
+                    if other ~= entity
                         and canCollide ( other )
                         and entity.x + entity.width > other.x
                         and entity.x < other.x + other.width
                         and entity.y + entity.height > other.y
-                        and entity.y < other.y + other.height 
+                        and entity.y < other.y + other.height
                     then
                         table.insert ( collisions, other )
                     end
@@ -401,25 +401,23 @@ Entity.damage =
 
 
 Entity.divideForce =
+    function ( moving, standing )
+        if standing.mass
+            and moving.mass
+            and moving.forceX
+        then
+            local totalMass = moving.mass + standing.mass
+            local fMoving = moving.forceX * moving.mass / totalMass
+            local fStanding = moving.forceX * standing.mass / totalMass
+            return fMoving, fStanding
+        else
+            return 0, 0
+        end
+    end
 
-    function ( entityA, entityB )
-        local divideForce =
-            if entityA.force
-                and entityB.force
-                and entityA
-            function ( moving, standing )
-                if standing.mass == "infinity" then
-                    return 0.0, 0.0
-
-                else
-                    local totalMass = moving.mass + standing.mass
-                    local fMoving = moving.forceX * moving.mass / totalMass
-                    local fStanding = moving.forceY * standing.mass / totalMass 
-                    return fMoving, fStanding
-                end
-            end
 
 Entity.onCollision =
+    function ( entityA, entityB )
 
         local A = entityA
         local B = entityB
@@ -437,20 +435,20 @@ Entity.onCollision =
 Utils = {}
 
 
-Utils.clamp = 
+Utils.clamp =
     function ( value, min, max )
         math.min ( max, math.max ( min, value ) )
     end
 
 
-Utils.sign = 
+Utils.sign =
     function ( value )
-        if value > 0 then 
+        if value > 0 then
             return 1
-        elseif value < 0 then 
+        elseif value < 0 then
             return -1
-        else 
-            return 0 
+        else
+            return 0
         end
     end
 
@@ -516,7 +514,7 @@ Vector.new =
     end
 
 
-Vector.copy = 
+Vector.copy =
     function ( v )
         return { x = v.x, y = v.y }
     end
@@ -574,7 +572,7 @@ Entity.Create = {}
 Entity.Create.player =
     function ( position )
         return
-        { position = Vector.scale ( position, TILE ) 
+        { position = Vector.scale ( position, TILE )
         , remainder = Vector.null ()
         , direction = Vector.null ()
         , force = Vector.null ()
@@ -591,8 +589,8 @@ Entity.Create.player =
 
 Entity.Create.obstacle =
     function ( position )
-        return 
-        { position = Vector.scale ( position, TILE ) 
+        return
+        { position = Vector.scale ( position, TILE )
         , width = TILE
         , height = TILE
         }
