@@ -59,7 +59,7 @@ love.update =
         local inputVector = Input.toVector ( model.input )
         Update.shooting ( model.entities, model.input )
         Update.controllable ( model.entities, inputVector )
-        Update.forces ( model.entities, timeDelta )
+        Update.applyForces ( model.entities, timeDelta )
         Update.moveAll ( model.entities, timeDelta )
         Input.resetPressed ( model.input )
     end
@@ -105,7 +105,7 @@ Update.shooting =
     end
 
 
-Update.forces =
+Update.applyForces =
     function ( entities, timeDelta )
         for _, entity in ipairs ( entities ) do
             if entity.position
@@ -123,10 +123,20 @@ Update.forces =
 
 Update.moveAll =
     function ( entities )
-        local shouldIterateAgain = true
+        local movingQueue = {}
         for _, entity in ipairs ( entities ) do
+            if entity.position
+                and entity.force
+            then
+                table.insert ( movingQueue, entity )
+            end
+        end
+
+        while not Table.empty ( movingQueue ) do
+            local entity = movingQueue.next
             Entity.move ( "x", entity, entities )
             Entity.move ( "y", entity, entities )
+            if Vector.isNull ( entity.force ) then
         end
     end
 
@@ -518,4 +528,37 @@ Array.filter =
             end
         end
         return newArray
+    end
+
+
+--------------------
+-- Queue
+--------------------
+
+
+Queue = {}
+
+
+Queue.new =
+    function ()
+        return {first = 1, last = 0}
+    end
+
+Queue.push =
+    function ( queue, element )
+        queue.last = queue.last + 1
+        queue [last] = element
+    end
+
+
+Queue.pop =
+    function ( queue )
+        local element = queue [first]
+        if queue.first > queue.last then
+            error ("queue is empty")
+        else
+            queue [first] = nil
+            queue.first = queue.first + 1
+            return element
+        end
     end
