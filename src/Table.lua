@@ -18,7 +18,11 @@ Table.serialize =
 
 Table.print =
     function ( table )
-        print ( Table.serialize ( table ) )
+        if table == nil then
+            error "Table.print was given nil instead of table"
+        else
+            print ( Table.serialize ( table ) )
+        end
     end
 
 
