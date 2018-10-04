@@ -1,6 +1,9 @@
 # Compiled Lua sources
 luac.out
 
+# Vim swap files
+*.swp
+
 # luarocks build files
 *.src.rock
 *.zip
