@@ -24,6 +24,9 @@ love.load =
             , Entity.Create.obstacle { x = 4, y = 7 }
             , Entity.Create.obstacle { x = 4, y = 8 }
             , Entity.Create.obstacle { x = 6, y = 8 }
+            , Entity.Create.box ( { x = 3, y = 3 }, 1 )
+            , Entity.Create.box ( { x = 5, y = 3 }, 1 )
+            , Entity.Create.box ( { x = 4, y = 3 }, 1 )
             }
 
         local input =
@@ -61,6 +64,7 @@ love.update =
         Update.controllable ( model.entities, inputVector )
         Update.applyForces ( model.entities, timeDelta )
         Update.moveAll ( model.entities, timeDelta )
+        model.entities = Update.removeDead ( model.entities )
         Input.resetPressed ( model.input )
     end
 
@@ -115,6 +119,7 @@ Update.applyForces =
             then
                 local force =
                     Vector.scale ( entity.speed * timeDelta, entity.direction )
+                Entity.forceBase = force
                 Entity.applyForce ( entity, force )
             end
         end
@@ -134,16 +139,50 @@ Update.moveAll =
 
         while not Queue.empty ( movingQueue ) do
             local entity = Queue.pop ( movingQueue )
-            Entity.move ( "x", entity, entities )
-            Entity.move ( "y", entity, entities )
+
+            local collisionsX = Entity.move ( "x", entity, entities )
+            if not Table.empty ( collisionsX ) then
+                for _, colliding in ipairs ( collisionsX ) do
+                    Queue.push ( movingQueue, colliding )
+                    Update.processCollision ( "x", entity, colliding )
+                end
+                Queue.push ( movingQueue, entity )
+            end
+
+            local collisionsY = Entity.move ( "y", entity, entities )
+            if not Table.empty ( collisionsY ) then
+                for _, colliding in ipairs ( collisionsY ) do
+                    Queue.push ( movingQueue, colliding )
+                    Update.processCollision ( "y", entity, colliding )
+                end
+                Queue.push ( movingQueue, entity )
+            end
         end
     end
 
 
-Update.processCollisions =
-    function ( entity, collisions )
-        for _, colliding in pairs ( collisions ) do
-        end
+Update.removeDead =
+    function ( entities )
+        local isAlive =
+            function ( entity )
+                return not entity.dead
+            end
+
+        return Array.filter ( entities, isAlive )
+    end
+
+
+Update.processCollision =
+    function ( axis, A, B )
+        local newForceA, newForceB = Entity.newForces ( A, B )
+        local partA = Vector.null ()
+        partA [axis] = newForceA [axis]
+        local partB = Vector.null ()
+        partB [axis] = newForceB [axis]
+        Entity.applyForce ( A, partA )
+        Entity.applyForce ( B, partB )
+        Entity.damage ( A, B.strength )
+        Entity.damage ( B, A.strength )
     end
 
 
@@ -332,18 +371,20 @@ Entity.move =
     function ( axis, entity, entities )
         local position = entity.position
         local force = entity.force
+        local collisions = {}
         if position and force then
             local sign = Utils.sign ( force [axis] )
             while force [axis] ~= 0 do
                 position [axis] = position [axis] + sign
                 force [axis] = force [axis] - sign
-                local collisions = Entity.collisionsWith ( entity, entities )
+                collisions = Entity.collisionsWith ( entity, entities )
                 if not Table.empty ( collisions ) then
                     position [axis] = position [axis] - sign
                     return collisions
                 end
             end
         end
+        return collisions
     end
 
 
@@ -365,8 +406,8 @@ Entity.areColliding =
         if A ~= B
             and A.position and A.width and A.height
             and B.position and B.width and B.height
-            and ( A.mask == nil or not Table.member ( A.mask, B ) )
-            and ( B.mask == nil or not Table.member ( B.mask, A ) )
+            and not ( A.mask and Table.member ( A.mask, B ) )
+            and not ( B.mask and Table.member ( B.mask, A ) )
         then
             return A.position.x + A.width > B.position.x
                 and A.position.x < B.position.x + B.width
@@ -378,38 +419,39 @@ Entity.areColliding =
 
 Entity.damage =
     function ( entity, strength )
-        if entity.health
-            and not entity.immune
-        then
-            entity.health = entity.health - strength
+        if entity.health and not entity.immune then
+            if strength then
+                entity.health = entity.health - strength
+            end
+            if entity.health <= 0.01 then
+                entity.dead = true
+            end
         end
     end
 
 
-Entity.divideForce =
-    function ( moving, standing )
-        if standing.mass
-            and moving.mass
-            and moving.forceX
+Entity.newForces =
+    function ( A, B )
+        local fA = Vector.null ()
+        local fB = Vector.null ()
+        if A.mass
+            and B.mass
+            and A.force
+            and B.force
         then
-            local totalMass = moving.mass + standing.mass
-            local fMoving = moving.forceX * moving.mass / totalMass
-            local fStanding = moving.forceX * standing.mass / totalMass
-            return fMoving, fStanding
-        else
-            return 0, 0
+            local totalMass = A.mass + B.mass
+            fA = Vector.add (
+                Vector.scale ( A.mass - B.mass, A.force )
+                , Vector.scale ( 2 * B.mass, B.force )
+                )
+            fA = Vector.scale ( 1 / totalMass, fA )
+            fB = Vector.add (
+                Vector.scale ( B.mass - A.mass, B.force )
+                , Vector.scale ( 2 * A.mass, A.force )
+                )
+            fB = Vector.scale ( 1 / totalMass, fB )
         end
-    end
-
-
-Entity.onCollision =
-    function ( entityA, entityB )
-
-        local A = entityA
-        local B = entityB
-
-        Entity.damage ( A, B.strength )
-        Entity.damage ( B, A.strength )
+        return fA, fB
     end
 
 
@@ -469,7 +511,6 @@ Entity.Create.player =
         , shooting = true
         , controllable = true
         , health = 10
-        , immune = false
         }
     end
 
@@ -484,6 +525,20 @@ Entity.Create.obstacle =
     end
 
 
+Entity.Create.box =
+    function ( position, mass )
+        return
+        { position = Vector.scale ( TILE, position )
+        , direction = Vector.null ()
+        , force = Vector.null ()
+        , remainder = Vector.null ()
+        , mass = mass
+        , width = TILE
+        , height = TILE
+        }
+    end
+
+
 Entity.Create.bullet =
     function ( position, direction, speed, damage )
         return
@@ -491,11 +546,12 @@ Entity.Create.bullet =
         , direction = Vector.copy ( direction )
         , force = Vector.null ()
         , remainder = Vector.null ()
-        , mass = 0.5
+        , mass = 10
         , width = TILE / 4
         , height = TILE / 4
         , speed = (speed or 10) * TILE
         , damage = (damage or 1)
+        , health = 0
         }
     end
 
@@ -543,10 +599,11 @@ Queue.new =
         return {first = 1, last = 0}
     end
 
+
 Queue.push =
     function ( queue, element )
         queue.last = queue.last + 1
-        queue [last] = element
+        queue [queue.last] = element
     end
 
 
@@ -555,8 +612,8 @@ Queue.pop =
         if Queue.empty ( queue ) then
             error ("queue is empty")
         else
-            local element = queue [first]
-            queue [first] = nil
+            local element = queue [queue.first]
+            queue [queue.first] = nil
             queue.first = queue.first + 1
             return element
         end
