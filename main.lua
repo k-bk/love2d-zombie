@@ -27,6 +27,7 @@ love.load =
             , Entity.Create.box ( { x = 3, y = 3 }, 1 )
             , Entity.Create.box ( { x = 5, y = 3 }, 1 )
             , Entity.Create.box ( { x = 4, y = 3 }, 1 )
+            , Entity.Create.enemy { x = 7, y = 7 }
             }
 
         local input =
@@ -75,10 +76,17 @@ Update = {}
 Update.controllable =
     function ( entities, inputVector )
         for _, entity in ipairs ( entities ) do
-            if entity.controllable
-                and entity.direction
-            then
-                entity.direction = Vector.copy ( inputVector )
+            local control = entity.controllable
+            if entity.direction then
+                if control == Control.input then
+                    entity.direction = Vector.copy ( inputVector )
+                elseif control == Control.AI then
+                    local dir
+                    dir = entity.position
+                    dir = Vector.sub ( model.player.position, dir )
+                    dir = Vector.normalize ( dir )
+                    entity.direction = dir
+                end
             end
         end
     end
@@ -373,11 +381,13 @@ Entity.move =
         local force = entity.force
         local collisions = {}
         if position and force then
+            local broadPhase =
+                Entity.collisionBroadPhase ( axis, entity, entities)
             local sign = Utils.sign ( force [axis] )
             while force [axis] ~= 0 do
                 position [axis] = position [axis] + sign
                 force [axis] = force [axis] - sign
-                collisions = Entity.collisionsWith ( entity, entities )
+                collisions = Entity.collisionsWith ( entity, broadPhase )
                 if not Table.empty ( collisions ) then
                     position [axis] = position [axis] - sign
                     return collisions
@@ -385,6 +395,25 @@ Entity.move =
             end
         end
         return collisions
+    end
+
+
+Entity.collisionBroadPhase =
+    function ( axis, entity, entities )
+        local position = entity.position
+        local force = entity.force
+        if position and force
+            and entity.width and entity.height
+        then
+            local movementBoundary = Entity.Create.collider (
+                Vector.add ( position, force )
+                , ( entity.width or 0 ) + math.abs ( entity.force.x )
+                , ( entity.height or 0 ) + math.abs ( entity.force.y )
+                )
+            return Entity.collisionsWith ( movementBoundary, entities )
+        else
+            return {}
+        end
     end
 
 
@@ -509,8 +538,18 @@ Entity.Create.player =
         , height = 2 * TILE
         , speed = 0.0 + TILE * 5
         , shooting = true
-        , controllable = true
+        , controllable = Control.input
         , health = 10
+        }
+    end
+
+
+Entity.Create.collider =
+    function ( position, width, height )
+        return
+        { position = Vector.copy ( position )
+        , width = width
+        , height = height
         }
     end
 
@@ -554,6 +593,30 @@ Entity.Create.bullet =
         , health = 0
         }
     end
+
+
+Entity.Create.enemy =
+    function ( position, speed, damage )
+        return
+        { position = Vector.scale ( TILE, position )
+        , direction = Vector.null ()
+        , force = Vector.null ()
+        , remainder = Vector.null ()
+        , mass = 1
+        , width = TILE
+        , height = TILE * 1.5
+        , speed = (speed or 2) * TILE
+        , damage = (damage or 1)
+        , health = 10
+        , controllable = Control.AI
+        }
+    end
+
+
+Control =
+    { input = {}
+    , AI = {}
+    }
 
 
 --------------------
