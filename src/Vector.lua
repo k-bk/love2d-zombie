@@ -45,6 +45,12 @@ Vector.normalize =
     end
 
 
+Vector.isNull =
+    function ()
+        return Vector.length ( v ) < Vector.epsilon
+    end
+
+
 Vector.null =
     function ()
         return { x = 0.0, y = 0.0 }
