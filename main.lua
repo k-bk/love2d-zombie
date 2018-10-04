@@ -123,20 +123,19 @@ Update.applyForces =
 
 Update.moveAll =
     function ( entities )
-        local movingQueue = {}
+        local movingQueue = Queue.new ()
         for _, entity in ipairs ( entities ) do
             if entity.position
                 and entity.force
             then
-                table.insert ( movingQueue, entity )
+                Queue.push ( movingQueue, entity )
             end
         end
 
-        while not Table.empty ( movingQueue ) do
-            local entity = movingQueue.next
+        while not Queue.empty ( movingQueue ) do
+            local entity = Queue.pop ( movingQueue )
             Entity.move ( "x", entity, entities )
             Entity.move ( "y", entity, entities )
-            if Vector.isNull ( entity.force ) then
         end
     end
 
@@ -553,12 +552,18 @@ Queue.push =
 
 Queue.pop =
     function ( queue )
-        local element = queue [first]
-        if queue.first > queue.last then
+        if Queue.empty ( queue ) then
             error ("queue is empty")
         else
+            local element = queue [first]
             queue [first] = nil
             queue.first = queue.first + 1
             return element
         end
+    end
+
+
+Queue.empty =
+    function ( queue )
+        return queue.first > queue.last
     end
