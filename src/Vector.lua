@@ -23,7 +23,7 @@ Vector.copy =
 
 
 Vector.scale =
-    function ( v, a )
+    function ( a, v )
         return { x = a * v.x, y = a * v.y }
     end
 
