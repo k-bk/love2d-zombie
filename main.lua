@@ -1,3 +1,7 @@
+Vector = require "src/Vector"
+Table = require "src/Table"
+
+
 --------------------
 -- LOAD
 --------------------
@@ -53,6 +57,7 @@ love.update =
         local inputVector = inputToVector ( model.input )
         Update.shoot ( model.player, model.input, model.entities )
         Update.controllable ( model.entities, inputVector )
+        Update.forces ( model.entities, timeDelta )
         Update.moveAll ( model.entities, timeDelta )
     end
 
@@ -98,7 +103,6 @@ Update.forces =
             then
                 local force =
                     Vector.scale ( entity.direction, entity.speed * timeDelta )
-                print ( Table.toString (force) )
                 Entity.applyForce ( entity, force )
             end
         end
@@ -108,10 +112,9 @@ Update.forces =
 Update.moveAll =
     function ( entities )
         local shouldIterateAgain = true
-        while shouldIterateAgain do
-            for _, entity in ipairs ( entities ) do
-                local collisions = Entity.moveX ( entity )
-            end
+        for _, entity in ipairs ( entities ) do
+            Entity.move ( Utils.axis.x, entity, entities )
+            Entity.move ( Utils.axis.y, entity, entities )
         end
     end
 
@@ -267,36 +270,6 @@ Draw.entity =
 
 
 --------------------
--- ARRAY
---------------------
-
-
-Array = {}
-
-
-Array.map =
-    function ( array, fun )
-        local newArray = {}
-        for i, v in ipairs ( array ) do
-            newArray [i] = fun ( v )
-        end
-        return newArray
-    end
-
-
-Array.filter =
-    function ( array, fun )
-        local newArray = {}
-        for i, v in ipairs ( array ) do
-            if fun ( v ) then
-                table.insert ( newArray, v )
-            end
-        end
-        return newArray
-    end
-
-
---------------------
 -- ENTITY
 --------------------
 
@@ -305,51 +278,39 @@ Entity = {}
 
 
 Entity.applyForce =
-    function ( entity, force )
-        if entity.force
-            and entity.remainder
+    function ( entity, appliedForce )
+        local force = entity.force
+        local remainder = entity.remainder
+        if force and remainder then
+            force.x, remainder.x = math.modf ( remainder.x + appliedForce.x )
+            force.y, remainder.y = math.modf ( remainder.y + appliedForce.y )
+        end
+    end
+
+
+Entity.move =
+    function ( axis, entity, entities )
+        if entity.position
+            and entity.force
         then
-            entity.force.x, remainder.x = math.modf ( remainder.x + force.x )
-            entity.force.y, remainder.y = math.modf ( remainder.y + force.y )
-        end
-    end
-
-
-Entity.moveX =
-    function ( entity, entities )
-        local position = entity.position
-        local remainder = entity.remainder
-        local force = entity.force
-
-        if position and remainder and force then
-            local sign = Utils.sign (force.x)
-            while force.x ~= 0 do
-                position.x = position.x + sign
-                force.x = force.x - sign
-                local collisions = Entity.collisionsWith ( entity, entities )
-                if not Table.empty ( collisions ) then
-                    position.x = position.x - sign
-                    return collisions
-                end
+            local position
+            local force
+            if axis == Utils.axis.x then
+                force = entity.force.x
+                position = entity.position.x
+            elseif axis == Utils.axis.y then
+                force = entity.force.y
+                position = entity.position.y
+            else
+                error "axis should be of type Utils.axis"
             end
-        end
-    end
-
-
-Entity.moveY =
-    function ( entity, entities )
-        local position = entity.position
-        local remainder = entity.remainder
-        local force = entity.force
-
-        if position and remainder and force then
-            local sign = Utils.sign (force.y)
-            while force.y ~= 0 do
-                position.y = position.y + sign
-                force.y = force.x - sign
+            local sign = Utils.sign ( force )
+            while force ~= 0 do
+                position = position + sign
+                force = force - sign
                 local collisions = Entity.collisionsWith ( entity, entities )
                 if not Table.empty ( collisions ) then
-                    position.y = position.y - sign
+                    position = position - sign
                     return collisions
                 end
             end
@@ -367,7 +328,6 @@ Entity.collisionsWith =
             end
 
         local collisions = {}
-
         if canCollide ( entity ) then
             for _, other in ipairs ( entities ) do
                 if other.mask == nil
@@ -375,10 +335,10 @@ Entity.collisionsWith =
                 then
                     if other ~= entity
                         and canCollide ( other )
-                        and entity.x + entity.width > other.x
-                        and entity.x < other.x + other.width
-                        and entity.y + entity.height > other.y
-                        and entity.y < other.y + other.height
+                        and entity.position.x + entity.width > other.position.x
+                        and entity.position.x < other.position.x + other.width
+                        and entity.position.y + entity.height > other.position.y
+                        and entity.position.y < other.position.y + other.height
                     then
                         table.insert ( collisions, other )
                     end
@@ -461,104 +421,10 @@ Utils.getColor =
     end
 
 
---------------------
--- TABLE
---------------------
-
-
-Table = {}
-
-
-Table.toString =
-    function ( table )
-        local result = "{ "
-        for k, v in pairs ( table ) do
-            result = result .. k .. " = " .. tostring (v) .. ", "
-        end
-        return result .. "}"
-    end
-
-
-Table.empty =
-    function ( table )
-        return next ( table ) == nil
-    end
-
-
-Table.member =
-    function ( table, value )
-        for _, v in pairs ( table ) do
-            if v == value then
-                return true
-            end
-        end
-        return false
-    end
-
-
---------------------
--- VECTOR
---------------------
-
-
-Vector = {}
-
-
-Vector.epsilon =
-    0.01
-
-
-Vector.new =
-    function ( x, y )
-        return { x = x, y = y }
-    end
-
-
-Vector.copy =
-    function ( v )
-        return { x = v.x, y = v.y }
-    end
-
-
-Vector.scale =
-    function ( v, a )
-        return { x = a * v.x, y = a * v.y }
-    end
-
-
-Vector.length =
-    function ( v )
-        return math.sqrt ( v.x * v.x + v.y * v.y )
-    end
-
-
-Vector.normalize =
-    function ( v )
-        local length = Vector.length ( v )
-        if length < Vector.epsilon then
-            return Vector.null ()
-        else
-            return { x = v.x / length, y = v.y / length }
-        end
-    end
-
-
-Vector.null =
-    function ()
-        return { x = 0.0, y = 0.0 }
-    end
-
-
-Vector.add =
-    function ( v, u )
-        return { x = v.x + u.x, y = v.y + u.y }
-    end
-
-
-Vector.sub =
-    function ( v, u )
-        return { x = v.x - u.x, y = v.y - u.y }
-    end
+Utils.axis =
+    { x = {}
+    , y = {}
+    }
 
 
 --------------------
@@ -603,11 +469,41 @@ Entity.Create.bullet =
         { position = { x = position.x, y = position.y }
         , remainder = Vector.null ()
         , direction = Vector.null ()
-        , force = Vector.null
+        , force = Vector.null ()
         , mass = 0.5
         , width = TILE / 4
         , height = TILE / 4
         , speed = (speed or 10) * TILE
         , damage = (damage or 1)
         }
+    end
+
+
+--------------------
+-- ARRAY
+--------------------
+
+
+Array = {}
+
+
+Array.map =
+    function ( array, fun )
+        local newArray = {}
+        for i, v in ipairs ( array ) do
+            newArray [i] = fun ( v )
+        end
+        return newArray
+    end
+
+
+Array.filter =
+    function ( array, fun )
+        local newArray = {}
+        for i, v in ipairs ( array ) do
+            if fun ( v ) then
+                table.insert ( newArray, v )
+            end
+        end
+        return newArray
     end
