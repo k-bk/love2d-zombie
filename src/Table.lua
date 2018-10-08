@@ -19,7 +19,7 @@ Table.serialize =
 Table.print =
     function ( table )
         if table == nil then
-            error "Table.print was given nil instead of table"
+            print ( "nil" )
         else
             print ( Table.serialize ( table ) )
         end
