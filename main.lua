@@ -1,5 +1,6 @@
 Vector = require "src/Vector"
 Table = require "src/Table"
+Input = require "src/Input"
 
 
 --------------------
@@ -30,25 +31,13 @@ love.load =
             , Entity.Create.enemy { x = 7, y = 7 }
             }
 
-        local input =
-            { up = false
-            , down = false
-            , left = false
-            , right = false
-            , mouseLeft = false
-            , mouseLeftPressed = false
-            , mouseRight = false
-            , mouseRightPressed = false
-            , mouse = Vector.null ()
-            }
-
         model =
             { entities = entities
             , player = player
             , screenWidth = 800
             , screenHeight = 600
             , canvas = love.graphics.newCanvas ( 800, 600 )
-            , input = input
+            , input = Input.load ()
             }
     end
 
@@ -65,6 +54,7 @@ love.update =
         Update.controllable ( model.entities, inputVector )
         Update.applyForces ( model.entities, timeDelta )
         Update.moveAll ( model.entities, timeDelta )
+        model.entities = Update.immune ( model.entities, timeDelta )
         model.entities = Update.removeDead ( model.entities )
         Input.resetPressed ( model.input )
     end
@@ -169,6 +159,21 @@ Update.moveAll =
     end
 
 
+Update.immune =
+    function ( entities, timeDelta )
+        local updateImmunity =
+            function ( entity )
+                if entity.immune and entity.immune > 0 then
+                    entity.immune = entity.immune - timeDelta
+                else
+                    entity.immune = nil
+                end
+                return entity
+            end
+        return Array.map ( entities, updateImmunity )
+    end
+
+
 Update.removeDead =
     function ( entities )
         local isAlive =
@@ -195,106 +200,37 @@ Update.processCollision =
 
 
 --------------------
--- INPUT
---------------------
-
-
-Input = {}
-
-
-Input.resetPressed =
-    function ( input )
-        input.mouseLeftPressed = false
-        input.mouseRightPressed = false
-    end
-
-
-Input.toVector =
-    function ( input )
-        local vector = Vector.null ()
-
-        if input.up then
-            vector.y = vector.y - 1
-        end
-        if input.down then
-            vector.y = vector.y + 1
-        end
-        if input.left then
-            vector.x = vector.x - 1
-        end
-        if input.right then
-            vector.x = vector.x + 1
-        end
-
-        return Vector.normalize ( vector )
-    end
-
-
---------------------
 -- SUBSCRIPTIONS
 --------------------
 
 
 love.keypressed =
     function ( _, scanCode, isRepeat )
-        if scanCode == "w" or scanCode == "up" then
-            model.input.up = true
-        elseif scanCode == "s" or scanCode == "down" then
-            model.input.down = true
-        elseif scanCode == "a" or scanCode == "left" then
-            model.input.left = true
-        elseif scanCode == "d" or scanCode == "right" then
-            model.input.right = true
-        end
+        Input.keyPressed ( model.input, scanCode )
     end
 
 
 love.keyreleased =
     function ( _, scanCode )
-        if scanCode == "w" or scanCode == "up" then
-            model.input.up = false
-        elseif scanCode == "s" or scanCode == "down" then
-            model.input.down = false
-        elseif scanCode == "a" or scanCode == "left" then
-            model.input.left = false
-        elseif scanCode == "d" or scanCode == "right" then
-            model.input.right = false
-        end
+        Input.keyReleased ( model.input, scanCode )
     end
 
 
 love.mousepressed =
     function ( x, y, button, isTouch )
-        model.input.mouse.x = x
-        model.input.mouse.y = y
-        if button == 1 then
-            model.input.mouseLeftPressed = true
-            model.input.mouseLeft = true
-        elseif button == 2 then
-            model.input.mouseRightPressed = true
-            model.input.mouseRight = true
-        end
+        Input.mousePressed ( model.input, x, y, button )
     end
 
 
 love.mousereleased =
     function ( x, y, button, isTouch )
-        model.input.mouseX = x
-        model.input.mouseY = y
-        if button == 1 then
-            model.input.mouseLeftPressed = false
-            model.input.mouseLeft = false
-        elseif button == 2 then
-            model.input.mouseRightPressed = false
-            model.input.mouseRight = false
-        end
+        Input.mouseReleased ( model.input, x, y, button )
     end
 
 
 love.mousemoved =
     function ( x, y, dx, dy, isTouch )
-        model.input.mouse.x = x
-        model.input.mouse.y = y
+        Input.mouseMoved ( model.input, x, y )
     end
 
 
@@ -451,8 +387,9 @@ Entity.damage =
         if entity.health and not entity.immune then
             if strength then
                 entity.health = entity.health - strength
+                entity.immune = 0.3
             end
-            if entity.health <= 0.01 then
+            if entity.health <= 0 then
                 entity.dead = true
             end
         end
@@ -579,7 +516,7 @@ Entity.Create.box =
 
 
 Entity.Create.bullet =
-    function ( position, direction, speed, damage )
+    function ( position, direction, speed, strength )
         return
         { position = Vector.copy ( position )
         , direction = Vector.copy ( direction )
@@ -589,14 +526,14 @@ Entity.Create.bullet =
         , width = TILE / 4
         , height = TILE / 4
         , speed = (speed or 10) * TILE
-        , damage = (damage or 1)
+        , strength = (strenght or 1)
         , health = 0
         }
     end
 
 
 Entity.Create.enemy =
-    function ( position, speed, damage )
+    function ( position, speed, strength )
         return
         { position = Vector.scale ( TILE, position )
         , direction = Vector.null ()
@@ -606,7 +543,7 @@ Entity.Create.enemy =
         , width = TILE
         , height = TILE * 1.5
         , speed = (speed or 2) * TILE
-        , damage = (damage or 1)
+        , strength = (strength or 1)
         , health = 10
         , controllable = Control.AI
         }
