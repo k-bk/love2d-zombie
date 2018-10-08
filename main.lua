@@ -1,6 +1,9 @@
 Vector = require "src/Vector"
 Table = require "src/Table"
 Input = require "src/Input"
+Queue = require "src/Queue"
+Array = require "src/Array"
+Utils = require "src/Utils"
 
 
 --------------------
@@ -38,6 +41,7 @@ love.load =
             , screenHeight = 600
             , canvas = love.graphics.newCanvas ( 800, 600 )
             , input = Input.load ()
+            , alarms = Alarm.load ()
             }
     end
 
@@ -50,10 +54,11 @@ love.load =
 love.update =
     function ( timeDelta )
         local inputVector = Input.toVector ( model.input )
-        Update.shooting ( model.entities, model.input )
+        Update.shooting ( model.entities, model.input, timeDelta )
         Update.controllable ( model.entities, inputVector )
         Update.applyForces ( model.entities, timeDelta )
         Update.moveAll ( model.entities, timeDelta )
+        Update.alarms ( timeDelta )
         model.entities = Update.immune ( model.entities, timeDelta )
         model.entities = Update.removeDead ( model.entities )
         Input.resetPressed ( model.input )
@@ -61,6 +66,20 @@ love.update =
 
 
 Update = {}
+
+
+Update.alarms =
+    function ( timeDelta )
+        local newAlarms = {}
+
+        for k, alarm in pairs ( Alarm.alarms ) do
+            alarm = Alarm.update ( alarm, timeDelta )
+            if not (alarm == Alarm.done) then
+                table.insert ( newAlarms, alarm )
+            end
+        end
+        Alarm.alarms = newAlarms
+    end
 
 
 Update.controllable =
@@ -83,24 +102,42 @@ Update.controllable =
 
 
 Update.shooting =
-    function ( entities, input )
+    function ( entities, input, timeDelta )
+        local createBullet =
+            function ( entity )
+                local position =
+                    Vector.add ( entity.position, entity.shooting.origin )
+                local dir = Vector.copy ( input.mouse )
+                dir = Vector.sub ( dir, position )
+                dir = Vector.normalize ( dir )
+                local bullet = Entity.Create.bullet ( position, dir )
+                bullet.mask = { entity }
+                return bullet
+            end
+
+        local loadWeapon =
+            function ( entity )
+                return function ()
+                    entity.shooting.loaded = true
+                end
+            end
+
         if input.mouseLeftPressed then
-            local bullets = {}
+            local newBullets = {}
             for _, entity in ipairs ( entities ) do
                 if entity.position
                     and entity.shooting
+                    and entity.shooting.loaded
                 then
-                    local dir
-                    dir = Vector.copy ( input.mouse )
-                    dir = Vector.sub ( dir, entity.position )
-                    dir = Vector.normalize ( dir )
-                    local bullet
-                    bullet = Entity.Create.bullet ( entity.position, dir )
+                    local shooting = entity.shooting
+                    shooting.loaded = false
+                    Alarm.set ( shooting.reloadTime, loadWeapon ( entity ) )
+                    local bullet = createBullet ( entity )
                     bullet.mask = { entity }
-                    table.insert ( bullets, bullet )
+                    table.insert ( newBullets, bullet )
                 end
             end
-            for _, bullet in ipairs ( bullets ) do
+            for _, bullet in ipairs ( newBullets ) do
                 table.insert ( entities, bullet )
             end
         end
@@ -422,40 +459,6 @@ Entity.newForces =
 
 
 --------------------
--- UTILS
---------------------
-
-
-Utils = {}
-
-
-Utils.clamp =
-    function ( value, min, max )
-        math.min ( max, math.max ( min, value ) )
-    end
-
-
-Utils.sign =
-    function ( value )
-        if value > 0 then
-            return 1
-        elseif value < 0 then
-            return -1
-        else
-            return 0
-        end
-    end
-
-
-Utils.getColor =
-    function ()
-        local r, g, b, a
-        r, g, b, a = love.graphics.getColor ()
-        return { r, g, b, a }
-    end
-
-
---------------------
 -- CREATE
 --------------------
 
@@ -474,7 +477,11 @@ Entity.Create.player =
         , width = TILE
         , height = 2 * TILE
         , speed = 0.0 + TILE * 5
-        , shooting = true
+        , shooting =
+            { origin = { x = TILE / 2, y = TILE }
+            , loaded = true
+            , reloadTime = 0.3
+            }
         , controllable = Control.input
         , health = 10
         }
@@ -557,70 +564,38 @@ Control =
 
 
 --------------------
--- ARRAY
+-- ALARM
 --------------------
 
 
-Array = {}
+Alarm = {}
 
 
-Array.map =
-    function ( array, fun )
-        local newArray = {}
-        for i, v in ipairs ( array ) do
-            newArray [i] = fun ( v )
-        end
-        return newArray
-    end
+Alarm.done = {}
 
 
-Array.filter =
-    function ( array, fun )
-        local newArray = {}
-        for i, v in ipairs ( array ) do
-            if fun ( v ) then
-                table.insert ( newArray, v )
-            end
-        end
-        return newArray
-    end
+Alarm.alarms = {}
 
 
---------------------
--- Queue
---------------------
-
-
-Queue = {}
-
-
-Queue.new =
+Alarm.load =
     function ()
-        return {first = 1, last = 0}
+        return true
     end
 
 
-Queue.push =
-    function ( queue, element )
-        queue.last = queue.last + 1
-        queue [queue.last] = element
+Alarm.set =
+    function ( time, event )
+        local newAlarm = { time = time, event = event }
+        table.insert ( Alarm.alarms, newAlarm )
     end
 
 
-Queue.pop =
-    function ( queue )
-        if Queue.empty ( queue ) then
-            error ("queue is empty")
-        else
-            local element = queue [queue.first]
-            queue [queue.first] = nil
-            queue.first = queue.first + 1
-            return element
+Alarm.update =
+    function ( alarm, timeDelta )
+        alarm.time = alarm.time - timeDelta
+        if alarm.time <= 0 then
+            alarm.event ()
+            return Alarm.done
         end
-    end
-
-
-Queue.empty =
-    function ( queue )
-        return queue.first > queue.last
+        return alarm
     end
