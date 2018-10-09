@@ -1,18 +1,18 @@
 --------------------
--- UTILS
+-- Math
 --------------------
 
 
-local Utils = {}
+local Math = {}
 
 
-Utils.clamp =
+Math.clamp =
     function ( value, min, max )
         math.min ( max, math.max ( min, value ) )
     end
 
 
-Utils.sign =
+Math.sign =
     function ( value )
         if value > 0 then
             return 1
@@ -24,12 +24,4 @@ Utils.sign =
     end
 
 
-Utils.getColor =
-    function ()
-        local r, g, b, a
-        r, g, b, a = love.graphics.getColor ()
-        return { r, g, b, a }
-    end
-
-
-return Utils
+return Math

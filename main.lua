@@ -3,7 +3,8 @@ Table = require "src/Table"
 Input = require "src/Input"
 Queue = require "src/Queue"
 Array = require "src/Array"
-Utils = require "src/Utils"
+Math = require "src/Math"
+Color = require "src/Color"
 
 
 --------------------
@@ -54,11 +55,11 @@ love.load =
 love.update =
     function ( timeDelta )
         local inputVector = Input.toVector ( model.input )
-        Update.shooting ( model.entities, model.input, timeDelta )
+        Update.shooting ( model.entities, model.input, model.alarms, timeDelta )
         Update.controllable ( model.entities, inputVector )
         Update.applyForces ( model.entities, timeDelta )
         Update.moveAll ( model.entities, timeDelta )
-        Update.alarms ( timeDelta )
+        model.alarms = Update.alarms ( model.alarms, timeDelta )
         model.entities = Update.immune ( model.entities, timeDelta )
         model.entities = Update.removeDead ( model.entities )
         Input.resetPressed ( model.input )
@@ -69,16 +70,16 @@ Update = {}
 
 
 Update.alarms =
-    function ( timeDelta )
+    function ( alarms, timeDelta )
         local newAlarms = {}
 
-        for k, alarm in pairs ( Alarm.alarms ) do
+        for k, alarm in pairs ( alarms ) do
             alarm = Alarm.update ( alarm, timeDelta )
             if not (alarm == Alarm.done) then
                 table.insert ( newAlarms, alarm )
             end
         end
-        Alarm.alarms = newAlarms
+        return newAlarms
     end
 
 
@@ -102,24 +103,26 @@ Update.controllable =
 
 
 Update.shooting =
-    function ( entities, input, timeDelta )
-        local createBullet =
-            function ( entity )
-                local position =
-                    Vector.add ( entity.position, entity.shooting.origin )
-                local dir = Vector.copy ( input.mouse )
-                dir = Vector.sub ( dir, position )
-                dir = Vector.normalize ( dir )
-                local bullet = Entity.Create.bullet ( position, dir )
-                bullet.mask = { entity }
-                return bullet
-            end
-
+    function ( entities, input, alarms, timeDelta )
         local loadWeapon =
             function ( entity )
                 return function ()
                     entity.shooting.loaded = true
                 end
+            end
+
+        local shoot =
+            function ( entity )
+                local shooting = entity.shooting
+                local position = Vector.add ( entity.position, shooting.origin )
+                local dir = Vector.sub ( input.mouse, position )
+                dir = Vector.normalize ( dir )
+                local bullet = Entity.Create.bullet ( position, dir )
+                bullet.mask = { entity }
+
+                shooting.loaded = false
+                Alarm.set ( alarms, shooting.reloadTime, loadWeapon ( entity ) )
+                return bullet
             end
 
         if input.mouseLeftPressed then
@@ -129,11 +132,7 @@ Update.shooting =
                     and entity.shooting
                     and entity.shooting.loaded
                 then
-                    local shooting = entity.shooting
-                    shooting.loaded = false
-                    Alarm.set ( shooting.reloadTime, loadWeapon ( entity ) )
-                    local bullet = createBullet ( entity )
-                    bullet.mask = { entity }
+                    local bullet = shoot ( entity )
                     table.insert ( newBullets, bullet )
                 end
             end
@@ -295,7 +294,7 @@ Draw = {}
 
 Draw.cursor =
     function ( input )
-        local oldColor = Utils.getColor ()
+        local oldColor = Color.getActual ()
             if input.mouseLeftPressed then
                 love.graphics.setColor ( 1, 0, 0 )
             else
@@ -356,7 +355,7 @@ Entity.move =
         if position and force then
             local broadPhase =
                 Entity.collisionBroadPhase ( axis, entity, entities)
-            local sign = Utils.sign ( force [axis] )
+            local sign = Math.sign ( force [axis] )
             while force [axis] ~= 0 do
                 position [axis] = position [axis] + sign
                 force [axis] = force [axis] - sign
@@ -574,19 +573,16 @@ Alarm = {}
 Alarm.done = {}
 
 
-Alarm.alarms = {}
-
-
 Alarm.load =
     function ()
-        return true
+        return {}
     end
 
 
 Alarm.set =
-    function ( time, event )
+    function ( alarms, time, event )
         local newAlarm = { time = time, event = event }
-        table.insert ( Alarm.alarms, newAlarm )
+        table.insert ( alarms, newAlarm )
     end
 
 
