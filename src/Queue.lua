@@ -12,6 +12,22 @@ Queue.new =
     end
 
 
+Queue.size =
+    function ( queue )
+        return queue.last - queue.first + 1
+    end
+
+
+Queue.head =
+    function ( queue )
+        if Queue.empty ( queue ) then
+            return {}
+        else
+            return queue [queue.first]
+        end
+    end
+
+
 Queue.push =
     function ( queue, element )
         queue.last = queue.last + 1
@@ -35,6 +51,20 @@ Queue.pop =
 Queue.empty =
     function ( queue )
         return queue.first > queue.last
+    end
+
+
+Queue.iterate =
+    function ( queue )
+        local current = queue.first
+        local last = queue.last
+        return
+        function ()
+            if current < last then
+                current = current + 1
+                return queue [current]
+            end
+        end
     end
 
 
