@@ -1,3 +1,4 @@
+Alarm = require "src/Alarm"
 Array = require "src/Array"
 Color = require "src/Color"
 Input = require "src/Input"
@@ -620,38 +621,3 @@ Control =
     { input = {}
     , AI = {}
     }
-
-
---------------------
--- ALARM
---------------------
-
-
-Alarm = {}
-
-
-Alarm.done = {}
-
-
-Alarm.load =
-    function ()
-        return {}
-    end
-
-
-Alarm.set =
-    function ( alarms, time, event )
-        local newAlarm = { time = time, event = event }
-        table.insert ( alarms, newAlarm )
-    end
-
-
-Alarm.update =
-    function ( alarm, timeDelta )
-        alarm.time = alarm.time - timeDelta
-        if alarm.time <= 0 then
-            alarm.event ()
-            return Alarm.done
-        end
-        return alarm
-    end
