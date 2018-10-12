@@ -46,7 +46,7 @@ Vector.normalize =
 
 
 Vector.isNull =
-    function ()
+    function ( v )
         return Vector.length ( v ) < Vector.epsilon
     end
 
@@ -66,6 +66,12 @@ Vector.add =
 Vector.sub =
     function ( v, u )
         return { x = v.x - u.x, y = v.y - u.y }
+    end
+
+
+Vector.equal =
+    function ( v, u )
+        return Vector.isNull ( Vector.sub ( v, u ) )
     end
 
 
