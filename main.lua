@@ -1,10 +1,12 @@
-Vector = require "src/Vector"
-Table = require "src/Table"
-Input = require "src/Input"
-Queue = require "src/Queue"
 Array = require "src/Array"
-Math = require "src/Math"
 Color = require "src/Color"
+Input = require "src/Input"
+Math = require "src/Math"
+Navigation = require "src/Navigation"
+Queue = require "src/Queue"
+Sound = require "src/Sound"
+Table = require "src/Table"
+Vector = require "src/Vector"
 
 
 --------------------
@@ -21,28 +23,37 @@ love.load =
         local player =
             Entity.Create.player { x = 1, y = 1 }
 
-        local entities =
-            { player
-            , Entity.Create.obstacle { x = 5, y = 5 }
+        local staticObstacles =
+            { Entity.Create.obstacle { x = 5, y = 5 }
             , Entity.Create.obstacle { x = 5, y = 6 }
             , Entity.Create.obstacle { x = 6, y = 7 }
             , Entity.Create.obstacle { x = 4, y = 7 }
             , Entity.Create.obstacle { x = 4, y = 8 }
             , Entity.Create.obstacle { x = 6, y = 8 }
+            }
+
+        local dynamicEntities =
+            { player
             , Entity.Create.box ( { x = 3, y = 3 }, 1 )
             , Entity.Create.box ( { x = 5, y = 3 }, 1 )
             , Entity.Create.box ( { x = 4, y = 3 }, 1 )
             , Entity.Create.enemy { x = 7, y = 7 }
             }
 
+        local screenWidth = 800
+        local screenHeight = 600
+
+        Sound.load ( screenWidth, screenHeight )
+
         model =
-            { entities = entities
+            { entities = Array.union ( staticObstacles, dynamicEntities )
             , player = player
-            , screenWidth = 800
-            , screenHeight = 600
-            , canvas = love.graphics.newCanvas ( 800, 600 )
+            , screenWidth = screenWidth
+            , screenHeight = screenHeight
+            , canvas = love.graphics.newCanvas ( screenWidth, screenHeight )
             , input = Input.load ()
             , alarms = Alarm.load ()
+            --, navigationMesh = Navigation.createMesh ( staticObstacles, 800, 600 )
             }
     end
 
@@ -54,15 +65,22 @@ love.load =
 
 love.update =
     function ( timeDelta )
+        model.time = love.timer.getTime ()
+        Input.updateGestures ( model.input, model.time )
         local inputVector = Input.toVector ( model.input )
-        Update.shooting ( model.entities, model.input, model.alarms, timeDelta )
+
+        Update.shooting ( model.entities, model.input, timeDelta )
         Update.controllable ( model.entities, inputVector )
         Update.applyForces ( model.entities, timeDelta )
         Update.moveAll ( model.entities, timeDelta )
+
         model.alarms = Update.alarms ( model.alarms, timeDelta )
+
         model.entities = Update.immune ( model.entities, timeDelta )
         model.entities = Update.removeDead ( model.entities )
+
         Input.resetPressed ( model.input )
+
     end
 
 
@@ -103,14 +121,7 @@ Update.controllable =
 
 
 Update.shooting =
-    function ( entities, input, alarms, timeDelta )
-        local loadWeapon =
-            function ( entity )
-                return function ()
-                    entity.shooting.loaded = true
-                end
-            end
-
+    function ( entities, input, timeDelta )
         local shoot =
             function ( entity )
                 local shooting = entity.shooting
@@ -119,26 +130,49 @@ Update.shooting =
                 dir = Vector.normalize ( dir )
                 local bullet = Entity.Create.bullet ( position, dir )
                 bullet.mask = { entity }
-
-                shooting.loaded = false
-                Alarm.set ( alarms, shooting.reloadTime, loadWeapon ( entity ) )
                 return bullet
             end
 
-        if input.mouseLeftPressed then
-            local newBullets = {}
-            for _, entity in ipairs ( entities ) do
-                if entity.position
-                    and entity.shooting
-                    and entity.shooting.loaded
+        local loadGun =
+            function ( entity )
+                local phase = entity.shooting.phase
+                if phase == Gun.loading and input.wheelUp > 0 then
+                    entity.shooting.phase = Gun.loaded
+                    Input.resetWheel ( input )
+                    Sound.playRandomized (
+                        Sound.shotgun.loaded
+                        , entity.position
+                        , 1 )
+                elseif phase == Gun.empty and input.wheelDown > 0 then
+                    entity.shooting.phase = Gun.loading
+                    Input.resetWheel ( input )
+                    Sound.playRandomized (
+                        Sound.shotgun.loading
+                        , entity.position
+                        , 1 )
+                end
+            end
+
+        local newBullets = {}
+        for _, entity in ipairs ( entities ) do
+            if entity.position and entity.shooting then
+                loadGun ( entity )
+                if input.mouseLeftPressed
+                    and entity.shooting.phase == Gun.loaded
                 then
                     local bullet = shoot ( entity )
                     table.insert ( newBullets, bullet )
+                    entity.shooting.phase = Gun.empty
+                    Sound.playRandomized (
+                        Sound.shotgun.shoot
+                        , entity.position
+                        , 1 )
+                    Input.resetWheel ( input )
                 end
             end
-            for _, bullet in ipairs ( newBullets ) do
-                table.insert ( entities, bullet )
-            end
+        end
+        for _, bullet in ipairs ( newBullets ) do
+            table.insert ( entities, bullet )
         end
     end
 
@@ -269,6 +303,10 @@ love.mousemoved =
         Input.mouseMoved ( model.input, x, y )
     end
 
+love.wheelmoved =
+    function ( x, y )
+        Input.wheelMoved ( model.input, y, model.time )
+    end
 
 --------------------
 -- DRAW
@@ -282,6 +320,12 @@ love.draw =
             love.graphics.clear ()
             Array.map ( model.entities, Draw.entity )
             Draw.cursor ( model.input )
+            Draw.cursorTrace ( model.input )
+
+            local oldColor = Color.getActual ()
+            love.graphics.setColor ( 0.8, 0, 0 )
+            Navigation.drawVertices ( model.navigationMesh )
+            love.graphics.setColor ( oldColor )
 
         love.graphics.setCanvas ()
 
@@ -324,6 +368,16 @@ Draw.entity =
                 , entity.width
                 , entity.height
                 )
+        end
+    end
+
+
+Draw.cursorTrace =
+    function ( input )
+        local pointA = Queue.head ( input.mouseHistory )
+        for pointB in Queue.iterate ( input.mouseHistory ) do
+            love.graphics.line ( pointA.x, pointA.y, pointB.x, pointB.y )
+            pointA = pointB
         end
     end
 
@@ -462,6 +516,12 @@ Entity.newForces =
 --------------------
 
 
+Gun =
+    { empty = {}
+    , loading = {}
+    , loaded = {}
+    }
+
 Entity.Create = {}
 
 
@@ -478,13 +538,13 @@ Entity.Create.player =
         , speed = 0.0 + TILE * 5
         , shooting =
             { origin = { x = TILE / 2, y = TILE }
-            , loaded = true
-            , reloadTime = 0.3
+            , phase = Gun.loaded
             }
         , controllable = Control.input
         , health = 10
         }
     end
+
 
 
 Entity.Create.collider =
