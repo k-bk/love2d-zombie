@@ -3,6 +3,9 @@
 --------------------
 
 
+require "src/Queue"
+
+
 local Input = {}
 
 
@@ -18,6 +21,10 @@ Input.load =
         , mouseRight = false
         , mouseRightPressed = false
         , mouse = Vector.null ()
+        , mouseHistory = Queue.new ()
+        , wheelUp = 0
+        , wheelDown = 0
+        , wheelHistory = {}
         }
     end
 
@@ -26,6 +33,29 @@ Input.resetPressed =
     function ( input )
         input.mouseLeftPressed = false
         input.mouseRightPressed = false
+    end
+
+
+Input.updateGestures =
+    function ( input, currentTime )
+        local maxTime = 0.5
+        input.wheelUp = 0
+        input.wheelDown = 0
+        for time, move in pairs ( input.wheelHistory ) do
+            if currentTime - time > maxTime then
+                input.wheelHistory [time] = nil
+            elseif move > 0 then
+                input.wheelUp = input.wheelUp + move
+            elseif move < 0 then
+                input.wheelDown = input.wheelDown - move
+            end
+        end
+    end
+
+
+Input.resetWheel =
+    function ( input )
+        input.wheelUp, input.wheelDown, input.wheelHistory = 0, 0, {}
     end
 
 
@@ -107,6 +137,16 @@ Input.mouseReleased =
 Input.mouseMoved =
     function ( input, x, y )
         input.mouse = { x = x, y = y }
+        Queue.push ( input.mouseHistory, input.mouse )
+        if Queue.size ( input.mouseHistory ) > 50 then
+            Queue.pop ( input.mouseHistory )
+        end
+    end
+
+
+Input.wheelMoved =
+    function ( input, move, time )
+        input.wheelHistory [time] = move
     end
 
 
