@@ -28,4 +28,17 @@ Array.filter =
     end
 
 
+Array.union =
+    function ( A, B )
+        local C = {}
+        for _, v in ipairs ( A ) do
+            table.insert ( C, v )
+        end
+        for _, v in ipairs ( B ) do
+            table.insert ( C, v )
+        end
+        return C
+    end
+
+
 return Array
