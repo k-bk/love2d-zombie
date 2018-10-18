@@ -20,12 +20,17 @@ Alarm.set =
     function ( alarms, time, event )
         local newAlarm = { total = time, time = 0, event = event }
         table.insert ( alarms, newAlarm )
+        return newAlarm
     end
 
 
 Alarm.progress =
     function ( alarm )
-        Math.clamp ( alarm.time / alarm.total, 0, 1 )
+        if alarm == Alarm.done then
+            return 0
+        else
+            return Math.clamp ( alarm.time / alarm.total, 0, 1 )
+        end
     end
 
 
