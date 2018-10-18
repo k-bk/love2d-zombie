@@ -1,8 +1,6 @@
 --------------------
 -- ENTITY
 --------------------
-
-
 local Entity = {}
 
 
@@ -94,6 +92,7 @@ Entity.damage =
             if strength then
                 entity.health = entity.health - strength
                 entity.immune = 0.3
+                entity.shake = Alarm.set ( model.alarms, 0.2, nil )
             end
             if entity.health <= 0 then
                 entity.dead = true
