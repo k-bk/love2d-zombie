@@ -1,9 +1,7 @@
 --------------------
 -- INPUT
 --------------------
-
-
-require "src/Queue"
+local Queue = require "src/Queue"
 
 
 local Input = {}
