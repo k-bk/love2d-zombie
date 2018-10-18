@@ -1,7 +1,7 @@
 --------------------
 -- ALARM
 --------------------
-local Math = require "src/Math"
+local Math = require "libraries/Math"
 
 
 local Alarm = {}

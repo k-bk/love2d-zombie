@@ -1,9 +1,9 @@
 --------------------
 -- NAVIGATION
 --------------------
-local Array = require "src/Array"
-local Vector = require "src/Vector"
-local Table = require "src/Table"
+local Array = require "libraries/Array"
+local Vector = require "libraries/Vector"
+local Table = require "libraries/Table"
 
 
 local Navigation = {}

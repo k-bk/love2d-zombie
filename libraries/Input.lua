@@ -1,8 +1,8 @@
 --------------------
 -- INPUT
 --------------------
-local Queue = require "src/Queue"
-local Vector = require "src/Vector"
+local Queue = require "libraries/Queue"
+local Vector = require "libraries/Vector"
 
 
 local Input = {}
