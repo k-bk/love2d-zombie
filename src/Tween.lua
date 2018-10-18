@@ -1,18 +1,21 @@
 --------------------
 -- TWEEN
 --------------------
-
-
 local Tween = {}
 
+
 Tween.linear =
-    function ( time )
-        return time
+-- No easing, no acceleration
+    function ( alarm )
+        return Alarm.progress ( alarm )
     end
 
-Tween.sinus =
-    function ( time )
-        return sin ( math.pi * time )
+
+Tween.quadratic =
+-- Doing a quadratic function
+    function ( alarm )
+        local progress = Alarm.progress ( alarm )
+        return 4 * progress * ( progress - 1 )
     end
 
 
