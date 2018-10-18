@@ -322,6 +322,7 @@ love.draw =
         love.graphics.setCanvas ( model.canvas )
 
             love.graphics.clear ()
+            Array.map ( model.entities, Draw.updateDrawPosition )
             Array.map ( model.entities, Draw.entity )
             Draw.cursor ( model.input )
             Draw.cursorTrace ( model.input )
@@ -359,16 +360,32 @@ Draw.cursor =
     end
 
 
-Draw.entity =
+Draw.updateDrawPosition =
     function ( entity )
         if entity.position
+            and entity.drawPosition
+        then
+            if entity.jump then
+                entity.drawPosition.x = entity.position.x + entity.jump.x
+                entity.drawPosition.y = entity.position.y + entity.jump.y
+            else
+                entity.drawPosition.x = entity.position.x
+                entity.drawPosition.y = entity.position.y
+            end
+        end
+    end
+
+
+Draw.entity =
+    function ( entity )
+        if entity.drawPosition
             and entity.width
             and entity.height
         then
             love.graphics.rectangle (
                 "line"
-                , entity.position.x
-                , entity.position.y
+                , entity.drawPosition.x
+                , entity.drawPosition.y
                 , entity.width
                 , entity.height
                 )

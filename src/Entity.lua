@@ -144,20 +144,21 @@ Entity.Create = {}
 Entity.Create.player =
     function ( position )
         return
-        { position = Vector.scale ( TILE, position )
+        { control = Entity.Control.input
         , direction = Vector.null ()
+        , drawPosition = Vector.null ()
         , force = Vector.null ()
-        , remainder = Vector.null ()
-        , mass = 1.0
-        , width = TILE
+        , health = 10
         , height = 2 * TILE
-        , speed = 0.0 + TILE * 5
+        , mass = 1.0
+        , position = Vector.scale ( TILE, position )
+        , remainder = Vector.null ()
         , shooting =
             { origin = { x = TILE / 2, y = TILE }
             , phase = Gun.loaded
             }
-        , control = Entity.Control.input
-        , health = 10
+        , speed = 0.0 + TILE * 5
+        , width = TILE
         }
     end
 
@@ -166,9 +167,10 @@ Entity.Create.player =
 Entity.Create.collider =
     function ( position, width, height )
         return
-        { position = Vector.copy ( position )
-        , width = width
+        { drawPosition = Vector.null ()
         , height = height
+        , position = Vector.copy ( position )
+        , width = width
         }
     end
 
@@ -176,9 +178,10 @@ Entity.Create.collider =
 Entity.Create.obstacle =
     function ( position )
         return
-        { position = Vector.scale ( TILE, position )
-        , width = TILE
+        { drawPosition = Vector.null ()
         , height = TILE
+        , position = Vector.scale ( TILE, position )
+        , width = TILE
         }
     end
 
@@ -186,13 +189,14 @@ Entity.Create.obstacle =
 Entity.Create.box =
     function ( position, mass )
         return
-        { position = Vector.scale ( TILE, position )
-        , direction = Vector.null ()
+        { direction = Vector.null ()
+        , drawPosition = Vector.null ()
         , force = Vector.null ()
-        , remainder = Vector.null ()
-        , mass = mass
-        , width = TILE
         , height = TILE
+        , mass = mass
+        , position = Vector.scale ( TILE, position )
+        , remainder = Vector.null ()
+        , width = TILE
         }
     end
 
@@ -200,16 +204,17 @@ Entity.Create.box =
 Entity.Create.bullet =
     function ( position, direction, speed, strength )
         return
-        { position = Vector.copy ( position )
-        , direction = Vector.copy ( direction )
+        { direction = Vector.copy ( direction )
+        , drawPosition = Vector.null ()
         , force = Vector.null ()
-        , remainder = Vector.null ()
-        , mass = 10
-        , width = TILE / 4
+        , health = 0
         , height = TILE / 4
+        , mass = 10
+        , position = Vector.copy ( position )
+        , remainder = Vector.null ()
         , speed = (speed or 10) * TILE
         , strength = (strenght or 1)
-        , health = 0
+        , width = TILE / 4
         }
     end
 
@@ -217,17 +222,18 @@ Entity.Create.bullet =
 Entity.Create.enemy =
     function ( position, speed, strength )
         return
-        { position = Vector.scale ( TILE, position )
+        { control = Entity.Control.AI
         , direction = Vector.null ()
+        , drawPosition = Vector.null ()
         , force = Vector.null ()
-        , remainder = Vector.null ()
-        , mass = 1
-        , width = TILE
+        , health = 10
         , height = TILE * 1.5
+        , mass = 1
+        , position = Vector.scale ( TILE, position )
+        , remainder = Vector.null ()
         , speed = (speed or 2) * TILE
         , strength = (strength or 1)
-        , health = 10
-        , control = Entity.Control.AI
+        , width = TILE
         }
     end
 
