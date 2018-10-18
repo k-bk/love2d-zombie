@@ -8,6 +8,7 @@ Navigation = require "src/Navigation"
 Queue = require "src/Queue"
 Sound = require "src/Sound"
 Table = require "src/Table"
+Tween = require "src/Tween"
 Vector = require "src/Vector"
 
 
@@ -75,6 +76,7 @@ love.update =
         Update.controllable ( model.entities, inputVector )
         Update.applyForces ( model.entities, timeDelta )
         Update.moveAll ( model.entities, timeDelta )
+        model.entities = Array.map ( model.entities, Update.drawPosition )
 
         model.alarms = Update.alarms ( model.alarms, timeDelta )
 
@@ -176,6 +178,20 @@ Update.shooting =
         for _, bullet in ipairs ( newBullets ) do
             table.insert ( entities, bullet )
         end
+    end
+
+
+Update.drawPosition =
+    function ( entity )
+        if entity.drawPosition and entity.position then
+            local shake = 0
+            if entity.shake then
+                shake = Tween.quadratic ( entity.shake ) * TILE / 2
+            end
+            entity.drawPosition.x = entity.position.x
+            entity.drawPosition.y = entity.position.y + shake
+        end
+        return entity
     end
 
 
@@ -322,10 +338,9 @@ love.draw =
         love.graphics.setCanvas ( model.canvas )
 
             love.graphics.clear ()
-            Array.map ( model.entities, Draw.updateDrawPosition )
             Array.map ( model.entities, Draw.entity )
             Draw.cursor ( model.input )
-            Draw.cursorTrace ( model.input )
+            -- Draw.cursorTrace ( model.input )
 
             local oldColor = Color.getActual ()
             love.graphics.setColor ( 0.8, 0, 0 )
@@ -357,22 +372,6 @@ Draw.cursor =
                 , 20
                 )
         love.graphics.setColor ( oldColor )
-    end
-
-
-Draw.updateDrawPosition =
-    function ( entity )
-        if entity.position
-            and entity.drawPosition
-        then
-            if entity.jump then
-                entity.drawPosition.x = entity.position.x + entity.jump.x
-                entity.drawPosition.y = entity.position.y + entity.jump.y
-            else
-                entity.drawPosition.x = entity.position.x
-                entity.drawPosition.y = entity.position.y
-            end
-        end
     end
 
 
