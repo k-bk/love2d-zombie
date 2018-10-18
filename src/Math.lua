@@ -8,7 +8,7 @@ local Math = {}
 
 Math.clamp =
     function ( value, min, max )
-        math.min ( max, math.max ( min, value ) )
+        return math.min ( max, math.max ( min, value ) )
     end
 
 
