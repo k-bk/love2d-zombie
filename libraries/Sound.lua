@@ -6,10 +6,13 @@
 local Sound = {}
 
 
+local path = "resources/audio/"
+
+
 Sound.shotgun =
-    { loading = love.audio.newSource ( "sound/gun-loading2.ogg", "static" )
-    , loaded = love.audio.newSource ( "sound/gun-loaded2.ogg", "static" )
-    , shoot = love.audio.newSource ( "sound/gun-shoot.ogg", "static" )
+    { loading = love.audio.newSource ( path .. "gun-loading2.ogg", "static" )
+    , loaded = love.audio.newSource ( path .. "gun-loaded2.ogg", "static" )
+    , shoot = love.audio.newSource ( path .. "gun-shoot.ogg", "static" )
     }
 
 
