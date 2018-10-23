@@ -56,7 +56,7 @@ love.load =
             , canvas = love.graphics.newCanvas ( screenWidth, screenHeight )
             , input = Input.load ()
             , alarms = Alarm.load ()
-            --, navigationMesh = Navigation.createMesh ( staticObstacles, 800, 600 )
+            , navigationMesh = Navigation.findAreas ( staticObstacles, 800, 600 )
             }
     end
 
@@ -338,14 +338,15 @@ love.draw =
         love.graphics.setCanvas ( model.canvas )
 
             love.graphics.clear ()
-            Array.map ( model.entities, Draw.entity )
-            Draw.cursor ( model.input )
-            -- Draw.cursorTrace ( model.input )
 
             local oldColor = Color.getActual ()
             love.graphics.setColor ( 0.8, 0, 0 )
-            Navigation.drawVertices ( model.navigationMesh )
+            Array.map ( model.navigationMesh, Draw.entity )
             love.graphics.setColor ( oldColor )
+
+            Array.map ( model.entities, Draw.entity )
+            Draw.cursor ( model.input )
+            -- Draw.cursorTrace ( model.input )
 
         love.graphics.setCanvas ()
 
@@ -387,6 +388,12 @@ Draw.entity =
                 , entity.drawPosition.y
                 , entity.width
                 , entity.height
+                )
+            love.graphics.line (
+                entity.drawPosition.x
+                , entity.drawPosition.y
+                , entity.drawPosition.x + entity.width
+                , entity.drawPosition.y + entity.height
                 )
         end
     end

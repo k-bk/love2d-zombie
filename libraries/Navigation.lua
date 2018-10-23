@@ -4,67 +4,65 @@
 local Array = require "libraries/Array"
 local Vector = require "libraries/Vector"
 local Table = require "libraries/Table"
+local AABB = require "libraries/AABB"
 
 
 local Navigation = {}
 
 
-Navigation.createMesh =
+Navigation.findAreas =
+    function ( obstacles, mapWidth, mapHeight )
+        local vertices =
+            Navigation.findVertices ( obstacles, mapWidth, mapHeight )
+
+        local blocked = Array.map ( obstacles, AABB.fromEntity )
+        local areas = {}
+
+        for _, vertex in ipairs ( vertices ) do
+            local boundary = AABB.addVertex ( {}, vertex )
+            for _, newVertex in ipairs ( vertices ) do
+                local newBoundary = AABB.addVertex ( boundary, newVertex )
+                if not AABB.anyColliding ( newBoundary, blocked )
+                    and not AABB.anyColliding ( newBoundary, areas )
+                then
+                    boundary = newBoundary
+                end
+            end
+            table.insert ( areas, boundary )
+        end
+
+        return Array.map ( areas, AABB.toEntity )
+    end
+
+
+Navigation.findVertices =
     function ( obstacles, mapWidth, mapHeight )
         local map =
             { position = Vector.null ()
             , width = mapWidth
             , height = mapHeight }
-        local vertices = Navigation.toVertices ( map )
 
+        local vertices = {}
+        vertices = Array.union ( vertices, Navigation.entityToVertices ( map ) )
         for _, obstacle in pairs ( obstacles ) do
-            local newVertices = Navigation.toVertices ( obstacle )
-            for _, vertex in ipairs ( newVertices ) do
-                table.insert ( vertices, vertex )
-            end
+            local newVertices = Navigation.entityToVertices ( obstacle )
+            vertices = Array.union ( vertices, newVertices )
         end
-
-
-        return Navigation.filterTheDuplicates ( vertices )
-        -- local mesh = {}
+        return vertices
     end
 
 
-Navigation.filterTheDuplicates =
-    function ( vertices )
-        local newVertices = {}
-        for _, vertex in ipairs ( vertices ) do
-            local shouldAdd = true
-            for _, compareWith in ipairs ( newVertices ) do
-                shouldAdd = Vector.equal ( vertex, compareWith ) or shouldAdd
-            end
-            if shouldAdd then
-                table.insert ( newVertices, vertex )
-            end
+Navigation.drawVertices =
+    function ( mesh )
+        mesh = mesh or {}
+        for _, vertex in ipairs ( mesh ) do
+            love.graphics.circle ( "fill", vertex.x, vertex.y, 5 )
         end
-        return newVertices
+        love.graphics.print ( #mesh, 10, 10 )
     end
 
 
-Navigation.findBoundingBox =
-    function ( vertices )
-        local xmin, xmax = math.huge, 0
-        local ymin, ymax = math.huge, 0
-        for _, vertex in ipairs ( vertices ) do
-            xmin = math.min ( xmin, vertex.x )
-            xmax = math.max ( xmax, vertex.x )
-            ymin = math.min ( ymin, vertex.y )
-            ymax = math.max ( ymax, vertex.y )
-        end
-        return
-            { { x = xmin, y = ymin }
-            , { x = xmin, y = ymax }
-            , { x = xmax, y = ymin }
-            , { x = xmax, y = ymax } }
-    end
-
-
-Navigation.toVertices =
+Navigation.entityToVertices =
     function ( entity )
         local position = entity.position
         local width = entity.width
@@ -78,15 +76,6 @@ Navigation.toVertices =
                 }
         end
         return {}
-    end
-
-
-Navigation.drawVertices =
-    function ( mesh )
-        mesh = mesh or {}
-        for _, vertex in ipairs ( mesh ) do
-            love.graphics.circle ( "fill", vertex.x, vertex.y, 5 )
-        end
     end
 
 
