@@ -75,4 +75,26 @@ Vector.equal =
     end
 
 
+Vector.min =
+    function ( ... )
+        local min = { x = math.huge, y = math.huge }
+        for _, v in pairs ( { ... } ) do
+            min.x = math.min ( min.x, v.x )
+            min.y = math.min ( min.y, v.y )
+        end
+        return min
+    end
+
+
+Vector.max =
+    function ( ... )
+        local max = { x = - math.huge, y = - math.huge }
+        for _, v in pairs ( { ... } ) do
+            max.x = math.max ( max.x, v.x )
+            max.y = math.max ( max.y, v.y )
+        end
+        return max
+    end
+
+
 return Vector
