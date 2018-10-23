@@ -8,11 +8,20 @@ local Table = {}
 
 Table.serialize =
     function ( table )
-        local result = "{ "
-        for k, v in pairs ( table ) do
-            result = result .. k .. " = " .. tostring (v) .. ", "
+        if type ( table ) == "table" then
+            local result = "{ "
+            for k, v in pairs ( table ) do
+                result = result .. k .. " = "
+                if type ( v ) == "table" then
+                    result = result .. Table.serialize (v) .. ", "
+                else
+                    result = result .. tostring (v) .. ", "
+                end
+            end
+            return result .. "}"
+        else
+            return "Not a table"
         end
-        return result .. "}"
     end
 
 
