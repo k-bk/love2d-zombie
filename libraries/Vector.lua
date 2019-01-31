@@ -1,100 +1,95 @@
 --------------------
--- VECTOR
+-- 2D VECTOR
 --------------------
 
 
-local Vector = {}
+local Vec2 = {}
+local mt = { __index = Vec2 }
 
 
-Vector.epsilon =
-    0.01
+Vec2.epsilon = 0.001
 
 
-Vector.new =
-    function ( x, y )
-        return { x = x, y = y }
+function Vec2.new ( x, y )
+    local v = { x = x, y = y }
+    setmetatable( v, mt )
+    return v
+end
+
+
+function Vec2.copy ( v )
+    return Vec2.new( v.x, v.y )
+end
+
+
+function Vec2.length ( v )
+    return math.sqrt( v.x * v.x + v.y * v.y )
+end
+
+
+function Vec2.normalize ( v )
+    local length = Vec2.length ( v )
+    if length < Vec2.epsilon then
+        return Vec2.null ()
+    else
+        return Vec2.new( v.x / length, v.y / length )
     end
+end
 
 
-Vector.copy =
-    function ( v )
-        return { x = v.x, y = v.y }
+function Vec2.isNull ( v )
+    return Vec2.length( v ) < Vec2.epsilon
+end
+
+
+function Vec2.null ()
+    return Vec2.new( 0.0, 0.0 )
+end
+
+
+function Vec2.add ( u, v )
+    return Vec2.new( u.x + v.x, u.y + v.y )
+end
+
+
+function Vec2.sub ( u, v )
+    return Vec2.new( u.x - v.x, u.y - v.y )
+end
+
+
+function Vec2.scale ( v, a )
+    return Vec2.new( a * v.x, a * v.y )
+end
+
+
+function Vec2.dot ( u, v )
+    return u.x * v.x + u.y * v.y
+end
+
+
+function Vec2.equal ( u, v )
+    return Vec2.isNull( Vec2.sub( u, v ) )
+end
+
+
+function Vec2.min ( ... )
+    local min = { x = math.huge, y = math.huge }
+    for _, v in pairs( { ... } ) do
+        min.x = math.min( min.x, v.x )
+        min.y = math.min( min.y, v.y )
     end
+    return min
+end
 
 
-Vector.scale =
-    function ( a, v )
-        return { x = a * v.x, y = a * v.y }
+function Vec2.max ( ... )
+    local max = { x = -math.huge, y = -math.huge }
+    for _, v in pairs( { ... } ) do
+        max.x = math.max( max.x, v.x )
+        max.y = math.max( max.y, v.y )
     end
+    return max
+end
 
 
-Vector.length =
-    function ( v )
-        return math.sqrt ( v.x * v.x + v.y * v.y )
-    end
-
-
-Vector.normalize =
-    function ( v )
-        local length = Vector.length ( v )
-        if length < Vector.epsilon then
-            return Vector.null ()
-        else
-            return { x = v.x / length, y = v.y / length }
-        end
-    end
-
-
-Vector.isNull =
-    function ( v )
-        return Vector.length ( v ) < Vector.epsilon
-    end
-
-
-Vector.null =
-    function ()
-        return { x = 0.0, y = 0.0 }
-    end
-
-
-Vector.add =
-    function ( v, u )
-        return { x = v.x + u.x, y = v.y + u.y }
-    end
-
-
-Vector.sub =
-    function ( v, u )
-        return { x = v.x - u.x, y = v.y - u.y }
-    end
-
-
-Vector.equal =
-    function ( v, u )
-        return Vector.isNull ( Vector.sub ( v, u ) )
-    end
-
-
-Vector.min =
-    function ( ... )
-        local min = { x = math.huge, y = math.huge }
-        for _, v in pairs ( { ... } ) do
-            min.x = math.min ( min.x, v.x )
-            min.y = math.min ( min.y, v.y )
-        end
-        return min
-    end
-
-
-Vector.max =
-    function ( ... )
-        local max = { x = - math.huge, y = - math.huge }
-        for _, v in pairs ( { ... } ) do
-            max.x = math.max ( max.x, v.x )
-            max.y = math.max ( max.y, v.y )
-        end
-        return max
-    end
-
-
-return Vector
+return Vec2
