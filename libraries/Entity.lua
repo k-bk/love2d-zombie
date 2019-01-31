@@ -5,12 +5,13 @@ local Entity = {}
 
 
 Entity.applyForce =
-    function ( entity, appliedForce )
+    function ( axis, entity, appliedForce )
         local force = entity.force
         local remainder = entity.remainder
         if force and remainder then
-            force.x, remainder.x = math.modf ( remainder.x + appliedForce.x )
-            force.y, remainder.y = math.modf ( remainder.y + appliedForce.y )
+            force [axis], remainder [axis] = math.modf (
+                force [axis] + remainder [axis] + appliedForce [axis]
+                )
         end
     end
 
@@ -112,15 +113,15 @@ Entity.newForces =
         then
             local totalMass = A.mass + B.mass
             fA = Vector.add (
-                Vector.scale ( A.mass - B.mass, A.force )
-                , Vector.scale ( 2 * B.mass, B.force )
+                Vector.scale ( A.force, A.mass - B.mass )
+                , Vector.scale ( B.force, 2 * B.mass )
                 )
-            fA = Vector.scale ( 1 / totalMass, fA )
+            fA = Vector.scale ( fA, 1 / totalMass, fA )
             fB = Vector.add (
-                Vector.scale ( B.mass - A.mass, B.force )
-                , Vector.scale ( 2 * A.mass, A.force )
+                Vector.scale ( B.force, B.mass - A.mass )
+                , Vector.scale ( A.force, 2 * A.mass )
                 )
-            fB = Vector.scale ( 1 / totalMass, fB )
+            fB = Vector.scale ( fB, 1 / totalMass )
         end
         return fA, fB
     end
@@ -150,7 +151,7 @@ Entity.Create.player =
         , health = 10
         , height = 2 * TILE
         , mass = 1.0
-        , position = Vector.scale ( TILE, position )
+        , position = Vector.scale ( position, TILE )
         , remainder = Vector.null ()
         , shooting =
             { origin = { x = TILE / 2, y = TILE }
@@ -179,7 +180,7 @@ Entity.Create.obstacle =
         return
         { drawPosition = Vector.null ()
         , height = TILE
-        , position = Vector.scale ( TILE, position )
+        , position = Vector.scale ( position, TILE )
         , width = TILE
         }
     end
@@ -193,7 +194,7 @@ Entity.Create.box =
         , force = Vector.null ()
         , height = TILE
         , mass = mass
-        , position = Vector.scale ( TILE, position )
+        , position = Vector.scale ( position, TILE )
         , remainder = Vector.null ()
         , width = TILE
         }
@@ -228,7 +229,7 @@ Entity.Create.enemy =
         , health = 10
         , height = TILE * 1.5
         , mass = 1
-        , position = Vector.scale ( TILE, position )
+        , position = Vector.scale ( position, TILE )
         , remainder = Vector.null ()
         , speed = (speed or 2) * TILE
         , strength = (strength or 1)
