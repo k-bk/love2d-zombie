@@ -7,15 +7,16 @@ local Table = {}
 
 
 Table.serialize =
-    function ( table )
-        if type ( table ) == "table" then
+    function ( table, separator )
+        local separator = separator or ", "
+        if type( table ) == "table" then
             local result = "{ "
-            for k, v in pairs ( table ) do
+            for k, v in pairs( table ) do
                 result = result .. k .. " = "
-                if type ( v ) == "table" then
-                    result = result .. Table.serialize (v) .. ", "
+                if type( v ) == "table" then
+                    result = result .. Table.serialize(v) .. separator
                 else
-                    result = result .. tostring (v) .. ", "
+                    result = result .. tostring(v) .. separator
                 end
             end
             return result .. "}"
@@ -26,24 +27,25 @@ Table.serialize =
 
 
 Table.print =
-    function ( table )
-        if table == nil then
-            print ( "nil" )
+    function ( table, separator )
+        local separator = separator or ", "
+        if type( table ) == "table" then
+            print( Table.serialize( table, separator ) )
         else
-            print ( Table.serialize ( table ) )
+            print( tostring( table ) )
         end
     end
 
 
 Table.empty =
     function ( table )
-        return next ( table ) == nil
+        return next( table ) == nil
     end
 
 
 Table.member =
     function ( table, value )
-        for _, v in pairs ( table ) do
+        for _, v in pairs( table ) do
             if v == value then
                 return true
             end
