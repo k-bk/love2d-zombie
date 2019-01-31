@@ -9,7 +9,7 @@ Queue = require "libraries/Queue"
 Sound = require "libraries/Sound"
 Table = require "libraries/Table"
 Tween = require "libraries/Tween"
-Vector = require "libraries/Vector"
+Vec2 = require "libraries/Vec2"
 
 
 --------------------
@@ -110,12 +110,12 @@ Update.controllable =
             local control = entity.control
             if entity.direction then
                 if control == Entity.Control.input then
-                    entity.direction = Vector.copy( inputVector )
+                    entity.direction = Vec2.copy( inputVector )
                 elseif control == Entity.Control.AI then
                     local dir
                     dir = entity.position
-                    dir = Vector.sub( model.player.position, dir )
-                    dir = Vector.normalize( dir )
+                    dir = Vec2.sub( model.player.position, dir )
+                    dir = Vec2.normalize( dir )
                     entity.direction = dir
                 end
             end
@@ -128,9 +128,9 @@ Update.shooting =
         local shoot =
             function ( entity )
                 local shooting = entity.shooting
-                local position = Vector.add( entity.position, shooting.origin )
-                local dir = Vector.sub( input.mouse, position )
-                dir = Vector.normalize( dir )
+                local position = Vec2.add( entity.position, shooting.origin )
+                local dir = Vec2.sub( input.mouse, position )
+                dir = Vec2.normalize( dir )
                 local bullet = Entity.Create.bullet( position, dir )
                 bullet.mask = { entity }
                 return bullet
@@ -203,7 +203,7 @@ Update.applyForces =
                 and entity.force
             then
                 local force =
-                    Vector.scale( entity.direction, entity.speed * timeDelta )
+                    Vec2.scale( entity.direction, entity.speed * timeDelta )
                 Entity.forceBase = force
                 Entity.applyForce( "x", entity, force )
                 Entity.applyForce( "y", entity, force )
@@ -276,9 +276,9 @@ Update.removeDead =
 Update.processCollision =
     function ( axis, A, B )
         local newForceA, newForceB = Entity.newForces( A, B )
-        local partA = Vector.null()
+        local partA = Vec2.null()
         partA [axis] = newForceA [axis]
-        local partB = Vector.null()
+        local partB = Vec2.null()
         partB [axis] = newForceB [axis]
         Entity.applyForce( axis, A, partA )
         Entity.applyForce( axis, B, partB )

@@ -2,6 +2,7 @@
 -- ENTITY
 --------------------
 local Entity = {}
+local Vector = require "libraries/Vec2"
 
 
 Entity.applyForce =

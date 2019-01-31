@@ -2,7 +2,7 @@
 -- INPUT
 --------------------
 local Queue = require "libraries/Queue"
-local Vector = require "libraries/Vector"
+local Vector = require "libraries/Vec2"
 
 
 local Input = {}

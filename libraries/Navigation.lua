@@ -2,7 +2,7 @@
 -- NAVIGATION
 --------------------
 local Array = require "libraries/Array"
-local Vector = require "libraries/Vector"
+local Vector = require "libraries/Vec2"
 local Table = require "libraries/Table"
 local AABB = require "libraries/AABB"
 
@@ -12,13 +12,22 @@ local Navigation = {}
 
 Navigation.findAreas =
     function ( obstacles, mapWidth, mapHeight )
+        local isArea =
+            function ( boundary )
+                local diff = Vector.sub ( boundary.max, boundary.min )
+                return diff.x > Vector.epsilon and diff.y > Vector.epsilon
+            end
+
         local vertices =
             Navigation.findVertices ( obstacles, mapWidth, mapHeight )
 
         local blocked = Array.map ( obstacles, AABB.fromEntity )
         local areas = {}
 
-        for _, vertex in ipairs ( vertices ) do
+        Table.print ( vertices, "\n" )
+
+        local vertex = vertices
+        while vertex ~= nil do
             local boundary = AABB.addVertex ( {}, vertex )
             for _, newVertex in ipairs ( vertices ) do
                 local newBoundary = AABB.addVertex ( boundary, newVertex )
@@ -28,8 +37,19 @@ Navigation.findAreas =
                     boundary = newBoundary
                 end
             end
-            table.insert ( areas, boundary )
+
+            if isArea ( boundary ) then
+                table.insert ( areas, boundary )
+                local newVertices = AABB.toVertices ( boundary )
+                for _, v in ipairs ( newVertices ) do
+                    Navigation.addIfUnique ( vertices, v )
+                end
+            end
+
+            vertex = next ( vertex )
         end
+
+        Table.print ( vertices, "\n" )
 
         return Array.map ( areas, AABB.toEntity )
     end
@@ -46,9 +66,23 @@ Navigation.findVertices =
         vertices = Array.union ( vertices, Navigation.entityToVertices ( map ) )
         for _, obstacle in pairs ( obstacles ) do
             local newVertices = Navigation.entityToVertices ( obstacle )
-            vertices = Array.union ( vertices, newVertices )
+            for _, v in pairs ( newVertices ) do
+                vertices = Navigation.addIfUnique ( vertices, v )
+            end
         end
         return vertices
+    end
+
+
+Navigation.addIfUnique =
+    function ( array, this )
+        for _, other in ipairs ( array ) do
+            if Vector.equal ( this, other ) then
+                return array
+            end
+        end
+        table.insert ( array, this )
+        return array
     end
 
 

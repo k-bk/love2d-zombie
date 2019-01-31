@@ -1,5 +1,8 @@
+--------------------
+-- Axis Aligned Bounding Box
+--------------------
 local Array = require "libraries/Array"
-local Vector = require "libraries/Vector"
+local Vector = require "libraries/Vec2"
 
 
 local AABB = {}
